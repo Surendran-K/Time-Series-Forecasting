@@ -18,7 +18,7 @@ if df1['y'].dtype == object:
 st.title('Facebook Prophet Time Series Forecasting')
 
 # Adding a date input to select the start date for training the model
-start_date = st.date_input('Select the start date for training the model:', value=pd.to_datetime('2023-01-01'))
+start_date = st.date_input('The start date for training the model is set automatically. Early the start date, better will be the prediction accuracy.:', value=pd.to_datetime('2009-01-01'))
 start_date = pd.to_datetime(start_date)
 
 # Filtering the data based on the selected start date
