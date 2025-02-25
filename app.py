@@ -18,7 +18,7 @@ if df1['y'].dtype == object:
 st.title('Facebook Prophet Time Series Forecasting')
 
 # Adding a date input to select the start date for training the model
-start_date = st.date_input('The start date for training the model is set automatically. Early the start date, better will be the prediction accuracy.:', value=pd.to_datetime('2009-01-01'))
+start_date = st.date_input('The start date for training the model is set automatically. Earlier the start date, better will be the prediction accuracy.:', value=pd.to_datetime('2009-01-01'))
 start_date = pd.to_datetime(start_date)
 
 # Filtering the data based on the selected start date
@@ -48,7 +48,7 @@ forecast['Lower Price'] = forecast['Lower Price'].round(0).astype(int)
 forecast['Upper Price'] = forecast['Upper Price'].round(0).astype(int)
 
 # Showing forecasted data in a line graph with data points called out
-st.subheader('Forecast Plot')
+st.subheader('Plotting the Forecasted Values')
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # Plotting only the future forecast points
@@ -56,7 +56,7 @@ future_forecast = forecast.tail(days)
 dates = future_forecast['Date']
 prices = future_forecast['Price']
 
-ax.plot(dates, prices, marker='o', linestyle='-', color='b')
+ax.plot(dates, prices, marker='o', linestyle='--', color='b')
 
 # Annotatating each data point with its value
 for i, txt in enumerate(prices):
