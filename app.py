@@ -35,6 +35,9 @@ days = st.slider('Select the number of days for future predictions:', min_value=
 # Creating a dataframe for future predictions
 future = model.make_future_dataframe(periods=days, freq='D')
 
+# Ensuring predictions start from 1st Feb 2025
+future = future[future['ds'] >= pd.Timestamp('2025-02-01')]
+
 # Filtering out weekends
 future = future[future['ds'].dt.dayofweek < 5]
 
@@ -45,27 +48,4 @@ forecast = model.predict(future)
 forecast.rename(columns={'ds': 'Date', 'yhat': 'Price', 'yhat_lower': 'Lower Price', 'yhat_upper': 'Upper Price'}, inplace=True)
 forecast['Date'] = pd.to_datetime(forecast['Date'])
 forecast['Date'] = forecast['Date'].dt.strftime('%d-%m-%Y')
-forecast['Price'] = forecast['Price'].round(0).astype(int)
-forecast['Lower Price'] = forecast['Lower Price'].round(0).astype(int)
-forecast['Upper Price'] = forecast['Upper Price'].round(0).astype(int)
-
-# Showing forecasted data in a line graph with data points called out
-st.subheader('Plotting the Forecasted Values')
-fig, ax = plt.subplots(figsize=(10, 6))
-
-# Plotting only the future forecast points
-future_forecast = forecast.tail(days)
-dates = future_forecast['Date']
-prices = future_forecast['Price']
-
-ax.plot(dates, prices, marker='o', linestyle='--', color='b')
-
-# Annotating each data point with its value
-for i, txt in enumerate(prices):
-    ax.annotate(txt, (dates.iloc[i], prices.iloc[i]), textcoords="offset points", xytext=(0,10), ha='center')
-
-plt.xticks(rotation=45)
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.title('Future Forecasted Price')
-st.pyplot(fig)
+forecast['Price'] = forecast
