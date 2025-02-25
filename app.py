@@ -4,7 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Using Nifty 50 data as sample
-
 df = pd.read_csv('Nifty 50 Historical Data.csv')
 df1 = df[['Date', 'Price']]
 df1.rename(columns={'Date': 'ds', 'Price': 'y'}, inplace=True)
@@ -18,7 +17,7 @@ if df1['y'].dtype == object:
 st.title('Facebook Prophet Time Series Forecasting')
 
 # Adding a date input to select the start date for training the model
-start_date = st.date_input('The start date for training the model is set automatically. Earlier the start date, better will be the prediction accuracy.:', value=pd.to_datetime('2009-01-01'))
+start_date = st.date_input('The start date for training the model is set automatically. The earlier the start date, the better the prediction accuracy:', value=pd.to_datetime('2009-01-01'))
 start_date = pd.to_datetime(start_date)
 
 # Filtering the data based on the selected start date
@@ -35,6 +34,9 @@ days = st.slider('Select the number of days for future predictions:', min_value=
 
 # Creating a dataframe for future predictions
 future = model.make_future_dataframe(periods=days, freq='D')
+
+# Filtering out weekends
+future = future[future['ds'].dt.dayofweek < 5]
 
 # Making predictions
 forecast = model.predict(future)
@@ -58,7 +60,7 @@ prices = future_forecast['Price']
 
 ax.plot(dates, prices, marker='o', linestyle='--', color='b')
 
-# Annotatating each data point with its value
+# Annotating each data point with its value
 for i, txt in enumerate(prices):
     ax.annotate(txt, (dates.iloc[i], prices.iloc[i]), textcoords="offset points", xytext=(0,10), ha='center')
 
