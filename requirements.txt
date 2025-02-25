@@ -2,4 +2,3 @@ streamlit
 prophet
 pandas
 matplotlib
-sklearn
