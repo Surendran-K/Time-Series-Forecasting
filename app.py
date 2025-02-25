@@ -2,107 +2,67 @@ import streamlit as st
 from prophet import Prophet
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from datetime import datetime
 
 # Using Nifty 50 data as sample
-try:
-    df = pd.read_csv('Nifty 50 Historical Data.csv')
-except FileNotFoundError:
-    st.error("Error: 'Nifty 50 Historical Data.csv' not found. Please make sure the file exists in the current directory.")
-    st.stop()
-except Exception as e:
-    st.error(f"Error loading data: {e}")
-    st.stop()
 
-# Data preprocessing
-try:
-    df1 = df[['Date', 'Price']]
-    df1.rename(columns={'Date': 'ds', 'Price': 'y'}, inplace=True)
-    df1.sort_values(by='ds', inplace=True)
-    df1.reset_index(drop=True, inplace=True)
-    df1['ds'] = pd.to_datetime(df1['ds'], format='%d-%m-%Y')
-    
-    # Handle comma in price values
-    if df1['y'].dtype == object:
-        df1['y'] = df1['y'].str.replace(',', '').astype(float)
-except Exception as e:
-    st.error(f"Error preprocessing data: {e}")
-    st.stop()
+df = pd.read_csv('Nifty 50 Historical Data.csv')
+df1 = df[['Date', 'Price']]
+df1.rename(columns={'Date': 'ds', 'Price': 'y'}, inplace=True)
+df1.sort_values(by='ds', inplace=True)
+df1.reset_index(drop=True, inplace=True)
+df1['ds'] = pd.to_datetime(df1['ds'], format='%d-%m-%Y')
+if df1['y'].dtype == object:
+    df1['y'] = df1['y'].str.replace(',', '').astype(float)
 
 # Using Streamlit app
 st.title('Facebook Prophet Time Series Forecasting')
 
-# Set fixed model parameters
-changepoint_prior_scale = 0.05
-seasonality_prior_scale = 1.0
-daily_seasonality = "auto"
-weekly_seasonality = True
-yearly_seasonality = True
+# Adding a date input to select the start date for training the model
+start_date = st.date_input('The start date for training the model is set automatically. Earlier the start date, better will be the prediction accuracy.:', value=pd.to_datetime('2009-01-01'))
+start_date = pd.to_datetime(start_date)
 
-# Set training start date
-start_date = pd.to_datetime('2009-01-01')
+# Filtering the data based on the selected start date
 df1_filtered = df1[df1['ds'] >= start_date].copy()
 
-# Fixed test size for evaluation metrics (20%)
-test_size = 20
-train_size = 100 - test_size
-split_index = int(len(df1_filtered) * (train_size/100))
-train_data = df1_filtered[:split_index].copy()
-test_data = df1_filtered[split_index:].copy()
+# Initializing the Prophet model
+model = Prophet()
 
-# Train model on training data
-with st.spinner('Training the Prophet model... This may take a moment.'):
-    # Initializing the Prophet model with fixed parameters
-    model = Prophet(
-        changepoint_prior_scale=changepoint_prior_scale,
-        seasonality_prior_scale=seasonality_prior_scale,
-        daily_seasonality=daily_seasonality,
-        weekly_seasonality=weekly_seasonality,
-        yearly_seasonality=yearly_seasonality
-    )
-    
-    # Add country holidays
-    model.add_country_holidays(country_name='IN')
-    
-    # Fit the model to the training data
-    model.fit(train_data)
+# Fitting the model to the data
+model.fit(df1_filtered)
 
-# Calculate evaluation metrics on test data
-future_test = model.make_future_dataframe(periods=0)
-future_test = pd.concat([future_test, test_data[['ds']]])
-forecast_test = model.predict(future_test)
+# Adding a slider to select the number of days for future predictions
+days = st.slider('Select the number of days for future predictions:', min_value=1, max_value=30, value=5)
 
-# Merge forecasts with actual values for test data
-eval_df = forecast_test[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
-eval_df = pd.merge(eval_df, test_data, on='ds', how='inner')
+# Creating a dataframe for future predictions, starting from Feb 1, 2025
+future = pd.DataFrame(pd.date_range(start='2025-02-01', periods=days, freq='B'), columns=['ds'])
 
-# Calculate MAPE only
-y_true = eval_df['y'].values
-y_pred = eval_df['yhat'].values
-mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+# Making predictions
+forecast = model.predict(future)
 
-# Display only MAPE
-st.header('Model Evaluation')
-st.metric("MAPE (%)", f"{mape:.2f}", 
-          help="Mean Absolute Percentage Error - lower is better")
+# Renaming forecast columns for clarity and changing to a readable format
+forecast.rename(columns={'ds': 'Date', 'yhat': 'Price', 'yhat_lower': 'Lower Price', 'yhat_upper': 'Upper Price'}, inplace=True)
+forecast['Date'] = pd.to_datetime(forecast['Date'])
+forecast['Date'] = forecast['Date'].dt.strftime('%d-%m-%Y')
+forecast['Price'] = forecast['Price'].round(0).astype(int)
+forecast['Lower Price'] = forecast['Lower Price'].round(0).astype(int)
+forecast['Upper Price'] = forecast['Upper Price'].round(0).astype(int)
 
-# Set forecast start date to February 1, 2025
-forecast_start_date = pd.to_datetime('2025-02-01')
+# Showing forecasted data in a line graph with data points called out
+st.subheader('Plotting the Forecasted Values')
+fig, ax = plt.subplots(figsize=(10, 6))
 
-# Calculate number of days between last historical date and forecast start date
-last_historical_date = df1_filtered['ds'].max()
-days_to_forecast_start = (forecast_start_date - last_historical_date).days
-if days_to_forecast_start < 0:
-    st.warning(f"Warning: Forecast start date ({forecast_start_date.strftime('%Y-%m-%d')}) is before the last historical data point ({last_historical_date.strftime('%Y-%m-%d')}). Using last historical date instead.")
-    forecast_start_date = last_historical_date
-    days_to_forecast_start = 0
+# Plotting only the future forecast points
+dates = forecast['Date']
+prices = forecast['Price']
 
-# Fixed number of days to forecast (10 days from Feb 1)
-days = 10
+ax.plot(dates, prices, marker='o', linestyle='--', color='b')
 
-# Creating a dataframe for future predictions starting from Feb 1
-future = model.make_future_dataframe(periods=days_to_forecast_start + days, freq='D')
+# Annotatating each data point with its value
+for i, txt in enumerate(prices):
+    ax.annotate(txt, (dates.iloc[i], prices.iloc[i]), textcoords="offset points", xytext=(0,10), ha='center')
 
-# Keep only dates from Feb 1 onwards for the forecast display
-future_display
+plt.xticks(rotation=45)
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.title('Future Forecasted Price')
+st.pyplot(fig)
