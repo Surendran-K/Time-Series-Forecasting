@@ -24,6 +24,7 @@ start_date = pd.to_datetime(start_date)
 # Filtering the data based on the selected start date
 df1_filtered = df1[df1['ds'] >= start_date].copy()
 
+
 # Initializing the Prophet model
 model = Prophet()
 
@@ -48,6 +49,7 @@ forecast['Lower Price'] = forecast['Lower Price'].round(0).astype(int)
 forecast['Upper Price'] = forecast['Upper Price'].round(0).astype(int)
 
 # Showing forecasted data in a line graph with data points called out
+st.subheader('This model is trained till 31st January 2025. The forecasted values are for the future dates.')
 st.subheader('Plotting the Forecasted Values')
 fig, ax = plt.subplots(figsize=(10, 6))
 
